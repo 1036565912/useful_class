@@ -8,13 +8,15 @@
 
 namespace App\Common;
 use Config;
+use Helper;
 class Sftp{
+    use SingleTon;
     private $sftp_host = null;
     private $sftp_port = null;
     private $sftp_user = null;
     private $sftp_pass = null;
-    private $sftp_connection = null;
-    private $sftp_resSFTP = null;
+    private $sftp_connection = null;  //ssh session ssh2连接资源 
+    private $sftp_resSFTP = null;    //sftp连接资源
 
     public function __construct(){
         $this->sftp_host = env('SFTP_HOST');
@@ -159,4 +161,42 @@ class Sftp{
             return false;
         }
     }
+
+    /**
+     * 断开远程sftp连接 防止cli模式下　长时间的连接没有数据的交互　而出现主动断开
+     * ＠author chenlin 
+     * @date 2019/4/24
+     */
+    public function disconnect(){
+        try{
+            //这个只能在ssh2 > 1.0　&& PHP VERSION > 7.0
+            ssh2_disconnect($this->sftp_connection);
+        }catch(\Exception $e){  
+            //低版本的情况下
+            $this->sftp_connection = null;
+            $this->sftp_resSFTP = null;
+        }   
+        return true;
+    }
+
+    /**
+     * 重新建立连接远程服务器
+     */
+    public function reconnect(){
+        if(empty($this->sftp_connection)){
+            //对sftp服务进行初始化
+            $this->sftp_connection = ssh2_connect($this->sftp_host,$this->sftp_port);
+            if(!ssh2_auth_password($this->sftp_connection,$this->sftp_user, $this->sftp_pass)){
+            return [
+                'code' => 500,
+                'msg'  => '无法在文件服务器进行验证',
+            ];
+        }
+        //初始化
+        $this->initialize();
+        }
+
+        return true;
+    }
+
 }
