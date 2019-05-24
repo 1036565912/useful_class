@@ -1,0 +1,155 @@
+    /**
+     * 导出word文档
+     * @param $user_code string 用户code
+     * @param $document_id int 文档id
+     * @throws \PhpOffice\PhpWord\Exception\Exception
+     * @author chenlin
+     * @date 2019/5/23
+     */
+    public function importWord(string $user_code, int $document_id){
+        $word = new PhpWord();
+        $reportDetail = new ReportDetail();
+        $document_info= $reportDetail->getValueByFields(['id' => $document_id],['code','name','committime','createtime','content','keyword','reason','law_code','lawyer_code','case_code','city']);
+        //样式数组
+        $pageStyle = ['name' => '微软雅黑','size' => 12]; //页面默认样式
+
+        $headerStyle = ['name' => '微软雅黑','size' => 11,'align' => 'center','bold' => true]; //页眉样式
+        $headerPstyle = ['align' => 'center']; //页眉段落样式
+
+        $footerStyle = ['name' => '微软雅黑','size' => 11,'align' => 'center','bold' => true]; //页脚样式
+        $footerPstyle = ['align' => 'center']; //页脚段落样式
+
+        $firstTitleStyle = ['name' => '微软雅黑','size' => 27,'align' => 'center','bold' => true]; //报告标题文字样式
+        $firstTitlePstyle = ['align' => 'center','space' => ['before' => 2000,'after' => 7000]]; //报告标题段落样式
+        //添加页面
+        $page = $word->addSection($pageStyle);
+        //添加页眉
+        $header = $page->addHeader();
+        $header->addText(config('config.word_config.header_title'),$headerStyle,$headerPstyle);
+
+        $page->addText('报告编号: '.$document_info['code'],['name' => '微软雅黑','size' => 12,'align' => 'left','bold' => true,'underline' => 'solid'],['align' => 'left','space' => ['before' => 200]]);
+        //添加报告首页
+        $page->addText(config('config.word_config.title'),$firstTitleStyle,$firstTitlePstyle);
+
+        //添加当前用户的code
+        //fgColor  是背景颜色
+        $page->addText($user_code,['name' => '微软雅黑','align' => 'center','color' => 'F73809','size' => 16],['align' => 'center']);
+        //添加时间
+        $time = date('Y年m月d日',time());
+        $page->addText($time,['name' => '微软雅黑','align' => 'center','color' => 'red','size' => 16],['align' =>'center','space' => ['before' => 500]]);
+
+        //添加换页
+        $page->addPageBreak();
+        $page->addTextBreak();
+        $page->addTextBreak();
+        $page->addTextBreak();
+        $page->addTextBreak();
+        $page->addTextBreak();
+        //添加第一个大块部分
+        $firstSectionStyle = ['name' => '微软雅黑','size' => 14,'color' => '000000','align' => 'left'];
+        $firstSectionPstyle = ['align' => 'left','space' => ['before' => 300]];
+        $page->addText('一、报告数据来源',['name' => '微软雅黑','size' => 20,'bold' => true,'align' => 'left'],['align' => 'left']);
+        $page->addText('时间: '.$document_info['createtime'],['name' => '微软雅黑','size' => 14,'color' => '000000','align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+        $page->addText('案例来源: 法之眼案例库',$firstSectionStyle,$firstSectionPstyle);
+        $page->addText('案例描述:',$firstSectionStyle,$firstSectionPstyle);
+        $page->addText($document_info['content'],array_merge($firstSectionStyle,['color' => '000000']),$firstSectionPstyle);
+        $page->addText('案情要点: '.$document_info['keyword'],$firstSectionStyle,$firstSectionPstyle);
+        $page->addText('案由: '.$document_info['reason'],$firstSectionStyle,$firstSectionPstyle);
+        $page->addText('地域: '.$document_info['city'],$firstSectionStyle,$firstSectionPstyle);
+        $page->addText('检索条件: 全文 + 案由 + 案情要点',$firstSectionStyle,$firstSectionPstyle);
+        $page->addText('相似案例数量: '.config('config.word.statistics'),$firstSectionStyle,$firstSectionPstyle);
+        $page->addText('数据采集时间: '.$document_info['committime'],$firstSectionStyle,$firstSectionPstyle);
+
+        //添加换页
+        $page->addPageBreak();
+        $page->addText('二、检索结果可视化',['name' => '微软雅黑','size' => 20,'bold' => true,'align' => 'left'],['align' => 'left']);
+        //$userCommonPstyle = ['align'=> 'left','indentation' => ['firstline' => Converter::pointToTwip(20)]];  //20代表两个字符
+        $page->addText('本次检索获取了'.config('config.word.statistics').'文书',$firstSectionStyle,array_merge($firstSectionPstyle,['indentation' => ['firstline' => Converter::pointToTwip(20)],'space' => ['before' => 1000]]));
+        $page->addText('1、相似案例胜负分布图',['name' => '微软雅黑','size' => 18,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+        //添加图片
+        $user_img_path = CLI_IMG_PATH.DIRECTORY_SEPARATOR.$user_code.DIRECTORY_SEPARATOR.$document_id.DIRECTORY_SEPARATOR;
+        $page->addTextBreak();
+        $page->addImage($user_img_path.'1.png',['width' => 250,'height' => 200,'align' => 'center']);
+        $page->addText('2、标的额分布图',['name' => '微软雅黑','size' => 18,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+        $page->addTextBreak();
+        $page->addImage($user_img_path.'2.png',['width' => 250,'height' => 200,'align' => 'center']);
+        $page->addText('3、当事人特征分析',['name' => '微软雅黑','size' => 18,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+        $page->addTextBreak();
+        $page->addImage($user_img_path.'3.png',['width' => 500,'height' => 200,'align' => 'center']);
+        $page->addText('4、一审案件中律师委托情况分析',['name' => '微软雅黑','size' => 18,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+        $page->addTextBreak();
+        $page->addImage($user_img_path.'4.png',['width' => 250,'height' => 200,'align' => 'center']);
+        $page->addText('5、法院统计',['name' => '微软雅黑','size' => 18,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+        $page->addTextBreak();
+        $page->addImage($user_img_path.'5.png',['width' => 250,'height' => 200,'align' => 'center']);
+
+        $page->addText('三、律师推荐',['name' => '微软雅黑','size' => 20,'bold' => true,'align' => 'left'],['align' => 'left']);
+        $lawyer_count = count(explode(',',$document_info['lawyer_code']));
+        $page->addText('共找到符合条件的律师'.$lawyer_count.'名。',$firstSectionStyle,array_merge($firstSectionPstyle,['indentation' => ['firstline' => Converter::pointToTwip(20)],'space' => ['before' => 1000,'after' => 500]]));
+
+        //添加表格
+        $table = $page->addTable(['borderSize'=>6, 'borderColor'=>'000000', 'cellMargin'=>80]);
+        $table->addRow();
+        $table->addCell(4000)->addText('序号',['name' => '微软雅黑','size' => 14,'align' => 'center'],['align' => 'center']);
+        $table->addCell(6000)->addText('推荐律师',['name' => '微软雅黑','size' => 14,'align' => 'center'],['align' => 'center']);
+        $lawyer_list = $reportDetail->getCompleteLawyerInfo($document_info['lawyer_code']);
+        $tableStyle = ['name' => '微软雅黑','font' => 16,'align' => 'left'];
+        $tablePstyle = ['align' => 'left','space' => ['before' => 200]];
+        //合并列  gridSpan    合并行 vMerge => restart  如果表格的一行高度由于其他列的高度太高撑起来了  就需要在cell添加样式 valign => center
+        if(empty($lawyer_list)){
+            $table->addRow();
+            $table->addCell(10000,['gridSpan' => 2, 'valign' => 'center'])->addText('暂无律师推荐',['name' => '微软雅黑','size' => 14,'align' => 'center','color' => 'ff0000','bold' => true],['align' => 'center']);
+        }else{
+            foreach($lawyer_list as $key => $row){
+                $case_court_info = $this->dealCaseCourt($row);
+                $table->addRow();
+                $table->addCell(4000,['valign' => 'center'])->addText($key+1,['name' => '微软雅黑','size' => 14,'align' => 'center'],['align' => 'center']);
+                $table->addCell(6000)->addText('姓名:  '.$row['lawyer_name'].'<br />律所:  '.$row['firm'].'<br />擅长案由:    '.implode('、',$case_court_info['reason']).'<br />常去法院:   '.implode('、',$case_court_info['resident']),
+                    $tableStyle,$tablePstyle);
+            }
+        }
+
+        $page->addText('四、相关法律法条',['name' => '微软雅黑','size' => 20,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 500]]);
+        $law_count = count(explode(',',$document_info['law_code']));
+        $page->addText('本次检索获取了'.config('config.word.statistics').'文书,共引用了法条'.$law_count.'项。如果引用的法条数目超过20条,这里仅展示引用最多的前20条。',$firstSectionStyle,array_merge($firstSectionPstyle,['indentation' => ['firstline' => Converter::pointToTwip(20)],'space' => ['before' => 1000,'after' => 500]]));
+        $law_list = $reportDetail->getCompleteLawInfo($document_info['law_code'],true);
+        foreach($law_list as $key => $row){
+            $page->addText(($key+1).'、'.$row['get_law']['title'].$row['title'],['name' => '微软雅黑','size' => 18,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+            $page->addText($row['content'],$firstSectionStyle,array_merge($firstSectionPstyle,['indentation' => ['firstline' => Converter::pointToTwip(20)],'space' => ['before' => 1000]]));
+        }
+        $page->addText('五、相似案例摘要',['name' => '微软雅黑','size' => 20,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 500]]);
+        $page->addText('本次检索获取了'.config('config.word.statistics').'文书,由于数量关系,这里仅展示相似度较高的前10个案例。',$firstSectionStyle,array_merge($firstSectionPstyle,['indentation' => ['firstline' => Converter::pointToTwip(20)],'space' => ['before' => 1000,'after' => 500]]));
+        $case_list = $reportDetail->getCompleteCaseInfo($document_info['case_code'],true);
+        foreach($case_list as $key => $row){
+            $page->addText(($key+1).'、'.$row['title'],['name' => '微软雅黑','size' => 18,'bold' => true,'align' => 'left'],['align' => 'left','space' => ['before' => 1000]]);
+            $accuser_excuse = empty($row['get_detail']['accuser_excuse']) ? '无' :  $this->dealJson($row['get_detail']['accuser_excuse']);
+            $respons_distribute = empty($row['get_detail']['respons_distribute']) ? '无' : $row['get_detail']['respons_distribute'];
+            $page->addText('原告诉称',array_merge($firstSectionStyle,['color' => '3366ff']),$firstSectionPstyle);
+            $page->addText($accuser_excuse,$firstSectionStyle,$firstSectionPstyle);
+            $page->addText('责任分担',array_merge($firstSectionStyle,['color' => '3366ff']),$firstSectionPstyle);
+            $page->addText($respons_distribute,$firstSectionStyle,$firstSectionPstyle);
+            $page->addText('判决结果',array_merge($firstSectionStyle,['color' => '3366ff']),$firstSectionPstyle);
+            $judge_result = $this->dealJudgeResult($row['get_detail']['judgement_result']);
+            $page->addText($judge_result,$firstSectionStyle,$firstSectionPstyle);
+        }
+        //添加页脚
+        $footer = $page->addFooter();
+        $footer->addPreserveText('第 {PAGE} 页,共 {NUMPAGES} 页',$footerStyle,$footerPstyle);
+        //保存文件
+        $objWriter = IOFactory::createWriter($word,'Word2007');
+        $current_user_path = CLI_WORD_PATH.DIRECTORY_SEPARATOR.$user_code;
+        //需要严格判断文件夹是否存在
+        if(!file_exists($current_user_path)){
+            if(!mkdir($current_user_path,'0755')){
+                return false;
+            }
+        }
+        $current_word_path = $current_user_path.DIRECTORY_SEPARATOR.$document_id.config('config.word.word_suffix');
+        //实例化一个word生成器
+        $writer = IOFactory::createWriter($word,'Word2007');
+        $writer->save($current_word_path);
+        if(file_exists($current_word_path)){
+            return true;
+        }
+        return false;
+    }
