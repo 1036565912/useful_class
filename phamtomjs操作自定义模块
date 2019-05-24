@@ -1,0 +1,200 @@
+ /**
+     * 爬取当前当前对应的用户、报告的统计信息图片
+     * @param string $user_code 用户code
+     * @param string $document_id integer 报告id
+     * @return bool
+     * @author chenlin
+     * @date 2019/5/14
+     */
+    public function getImg(string $user_code,int $document_id,string $script_name){
+        //自定义JS模块路径 既是常量CLI_SCRIPT_PATH
+        $user_location = CLI_SCRIPT_PATH.DIRECTORY_SEPARATOR; //自定义的JS模块的路径,不需要包含模块文件 /path/script/
+        $serviceContainer = ServiceContainer::getInstance();
+        $procedureLoader = $serviceContainer->get('procedure_loader_factory')->createProcedureLoader($user_location);
+        //实例化一个phantomjs客户端
+        $client = Client::getInstance();
+        if(PHP_OS == 'LINUX'){
+            $phantomjs = CLI_PHANTOMJS_PATH.'phantomjs';
+        }else{
+            $phantomjs = CLI_PHANTOMJS_PATH.'phantomjs.exe';
+        }
+        $client->getEngine()->setPath($phantomjs);
+        $client->setProcedure($script_name); //这里就是需要加载的可执行JS文件的名称 不需要后缀
+        $client->getProcedureLoader()->addLoader($procedureLoader);
+        //禁止缓存 测试阶段防止出现问题
+        $client->getProcedureCompiler()->disableCache();
+        //$client->getEngine()->addOption('--debug=true');  //启动调试模式
+        //$request = $client->getMessageFactory()->createRequest();
+        //使用自定义的请求类
+        $request = new CustomRequest();
+        $request->setSomething(config('config.word.base_url'),$user_code,$document_id);
+        //$request->setUrl('http://192.168.0.126:8020/LawEyes/templates/law_analysisReport.html?isPay=1&id=0001');
+        $response = $client->getMessageFactory()->createResponse();
+        $request->setMethod('GET');
+        //$request->setTimeout(2); //@tip 目前这个超时时间 在运行自定义脚本的时候 没有作用
+        //检验当前用户文件夹
+        $current_user_path =  CLI_IMG_PATH.DIRECTORY_SEPARATOR.$user_code;
+        if(!file_exists($current_user_path)){
+            if(!mkdir($current_user_path,'0755')){
+                return false;
+            }
+        }
+        //检验当前文档对应的文件夹是否存在
+        $current_document_path = $current_user_path.DIRECTORY_SEPARATOR.$document_id;
+        if(!file_exists($current_document_path)){
+            if(!mkdir($current_document_path,'0755')){
+                return false;
+            }
+        }
+        if($client->send($request,$response)){
+            //由于存在特定的因素 可能导致图片获取失败 这里先不做处理 直接跳过
+            $current_img_path =$current_user_path.DIRECTORY_SEPARATOR.$document_id.DIRECTORY_SEPARATOR.$this->img_name[$script_name];
+            if(!file_exists($current_img_path)){
+                return false;
+            }
+            return true;
+        }
+    }
+  
+ //自定义操作模板  编写成 xxx.proc文件
+var page = require('webpage').create();
+phantom.outputEncoding = "gbk";
+page.viewportSize = {width:430 ,height:410};
+var imgPath = '{{ input.getFirstImgPath() }}';
+page.open('{{ input.getUrl() }}','{{ input.getMethod() }}',function(status){
+	if(status !== 'success'){
+			console.log("Unable to access network");
+	}else{
+		window.setTimeout(function(){
+			page.clipRect = {
+				top : 50,
+				left : 0,
+				width : 430,
+				height: 360
+			};
+		},2000);
+		window.setTimeout(function(){
+				page.render(imgPath);
+				phantom.exit(0);
+		},5000);
+	}			
+});
+
+//自定义请求类  这个里面定义的方法 可以在自定义js模块中 直接通过模板引擎替换渲染
+use JonnyW\PhantomJs\Http\AbstractRequest;
+use JonnyW\PhantomJs\Http\RequestInterface;
+class CustomRequest extends AbstractRequest{
+    protected  $userCode = null;
+    protected  $base_url = null;
+    protected  $document_id = null;
+
+
+    /**
+     * Request type
+     *
+     * @var string
+     * @access protected
+     */
+    protected $type;
+
+    /**
+     * Get request type
+     *
+     * @access public
+     * @return string
+     */
+    public function getType()
+    {
+        if (!$this->type) {
+            return RequestInterface::REQUEST_TYPE_DEFAULT;
+        }
+
+        return $this->type;
+    }
+
+    /**
+     * Set request type
+     *
+     * @access public
+     * @param  string                                 $type
+     * @return \JonnyW\PhantomJs\Http\AbstractRequest
+     */
+    public function setType($type)
+    {
+        $this->type = $type;
+
+        return $this;
+    }
+
+
+    public function getFirstImgPath(){
+        $imgPath = '';
+        if(!empty($this->userCode) && !empty($this->document_id)){
+            //@tip 图片存储路径不能是绝对路径，只能是相对路径
+            $imgPath = 'public/img/'.$this->userCode.'/'.$this->document_id.'/'.'1.png';
+        }
+
+        return  $imgPath;
+    }
+
+    public function getSecondImgPath(){
+        $imgPath = '';
+        if(!empty($this->userCode) && !empty($this->document_id)){
+            //@tip 图片存储路径不能是绝对路径，只能是相对路径
+            $imgPath = 'public/img/'.$this->userCode.'/'.$this->document_id.'/'.'2.png';
+        }
+
+        return  $imgPath;
+    }
+    public function getThirdImgPath(){
+        $imgPath = '';
+        if(!empty($this->userCode) && !empty($this->document_id)){
+            //@tip 图片存储路径不能是绝对路径，只能是相对路径
+            $imgPath = 'public/img/'.$this->userCode.'/'.$this->document_id.'/'.'3.png';
+        }
+
+        return  $imgPath;
+    }
+    public function getFourthImgPath(){
+        $imgPath = '';
+        if(!empty($this->userCode) && !empty($this->document_id)){
+            //@tip 图片存储路径不能是绝对路径，只能是相对路径
+            $imgPath = 'public/img/'.$this->userCode.'/'.$this->document_id.'/'.'4.png';
+        }
+
+        return  $imgPath;
+    }
+    public function getFifthImgPath(){
+        $imgPath = '';
+        if(!empty($this->userCode) && !empty($this->document_id)){
+            //@tip 图片存储路径不能是绝对路径，只能是相对路径
+            $imgPath = 'public/img/'.$this->userCode.'/'.$this->document_id.'/'.'5.png';
+        }
+
+        return  $imgPath;
+    }
+    public function getSixthImgPath(){
+        $imgPath = '';
+        if(!empty($this->userCode) && !empty($this->document_id)){
+            //@tip 图片存储路径不能是绝对路径，只能是相对路径
+            $imgPath = 'public/img/'.$this->userCode.'/'.$this->document_id.'/'.'6.png';
+        }
+
+        return  $imgPath;
+    }
+
+
+    public function getUrl(){
+        $url = '';
+        if(!empty($this->base_url) && !empty($this->document_id)){
+            $url = $this->base_url.'?document_id='.$this->document_id;
+        }
+        return $url;
+    }
+
+    public function setSomething(string $base_url, string $user_code,$document_id){
+        $this->base_url = $base_url;
+        $this->userCode = $user_code;
+        $this->document_id = $document_id;
+    }
+}
