@@ -1,0 +1,76 @@
+    /**
+     * 创建一个es索引
+     * @retunr bool
+     */
+    public function createIndex(){
+        $client = ClientBuilder::create()->setHosts(config('config.elastic.host'))->build();
+        $params = array(
+            'index' => config('config.elastic.index'),
+            'body'  => array(
+                'settings' => array(
+                    'number_of_shards' => 1, //主分片数 10
+                    'number_of_replicas' => 1, //主分片的副本数 5
+                    'analysis' => [
+                        'filter' => [
+                            //定义停用词分词器
+                            'my_stop' => [
+                                'type' => 'stop',
+                                'stopwords_path' => 'stopWords/baidu_stopWords.txt',
+                            ]
+                        ],
+                        'analyzer' => [
+                            //定义两个可能需要用的分词器
+//                            'ik' => [
+//                                'tokenizer' =>  'ik_max_word'
+//
+//                            ],
+                            'jieba' => [
+                                'tokenizer' => 'jieba_index',
+                                'filter' => [  //分词器添加停用词分词器  需要使用filter
+                                    'my_stop'
+                                ]
+                            ]
+                        ]
+                    ]
+                ),
+                'mappings' => array(//映射
+                    config('config.elastic.type') => array(
+                        '_all' => array(  //这个是存储其他字段为一个大的字符串 在进行查询的时候如果没有指定字段的话 则会使用该字段 一般很少用
+                            //关闭所有字段检索
+                            'enabled' => false,
+                        ),
+                        '_source' => array(
+                            //存储原始文档
+                            'enabled' => true
+                        ),
+                        'properties' => array(
+                            'case_code' => [
+                                'type' => 'keyword',
+                            ],
+                            'province' => [
+                                'type' => 'keyword',
+                            ],
+                            'city'     => [
+                                'type' => 'keyword',
+                            ],
+                            'reason' => [
+                                'type' => 'keyword',
+                            ],
+                            'title' => [
+                                'type' => 'text',
+                                'analyzer' => 'jieba',
+                                'search_analyzer' => 'jieba'
+                            ],
+                            'search_content' => [
+                                'type' => 'text',
+                                'analyzer' => 'jieba',
+                                'search_analyzer' => 'jieba'
+                            ]
+                        )
+                    )
+                )
+            )
+        );
+        $result =  $client->indices()->create($params);
+        var_dump($result);
+    }
