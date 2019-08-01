@@ -1,0 +1,81 @@
+<?php
+/** 测试jwt的用法 */
+use Lcobucci\JWT\Builder;
+use Lcobucci\JWT\Signer\Hmac\Sha256;
+use Lcobucci\JWT\Signer\Key;
+use Lcobucci\JWT\Parser;
+
+include './vendor/autoload.php';
+
+//加密部分
+/*
+$builder = new Builder();
+
+$signer = new Sha256();
+
+//密匙
+$secret = 'suspn@)!*';
+
+$key = new Key($secret);
+
+
+//设置header和payload 以下的字段都可以自定义
+
+$builder->issuedBy('1036565912@qq.com')  //设置发布者
+        ->permittedFor('1036565912@qq.com') //设置接收者
+        ->identifiedBy('test',true)  //设置token id
+        ->issuedAt(time()) //设置发布的时间
+        ->expiresAt(time() + 60)  //设置过期时间
+        ->canOnlyBeUsedAfter(time() + 5) //只有在这个时间之后 才能用
+        ->withClaim('user_id',12)
+        ->withClaim('user_name','狼牙山');
+
+
+//设置签名
+$token = $builder->getToken($signer,$key);
+
+var_dump((string)$token);  //token类实现了 _toString 魔术方法
+
+*/
+
+//验证token有效性   获取当前生成数据
+//eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImp0aSI6InRlc3QifQ.eyJpc3MiOiIxMDM2NTY1OTEyQHFxLmNvbSIsImF1ZCI6IjEwMzY1NjU5MTJAcXEuY29tIiwianRpIjoidGVzdCIsImlhdCI6MTU2MDM5MjIyNywiZXhwIjoxNTYwMzkyMjg3LCJuYmYiOjE1NjAzOTIyMzIsInVzZXJfaWQiOjEyLCJ1c2VyX25hbWUiOiJcdTcyZmNcdTcyNTlcdTVjNzEifQ.9xrKKO_CicuBY2l-tHFyaE3eUKNL0K_cqoJDpendhkY
+//密匙
+$secret = 'suspn@)!*';
+
+$signer = new Sha256();
+
+//获取token
+//原生PHP获取 header中的token信息  $_SERVER['HTTP_AUTHORIZATION']
+$token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImp0aSI6InRlc3QifQ.eyJpc3MiOiIxMDM2NTY1OTEyQHFxLmNvbSIsImF1ZCI6IjEwMzY1NjU5MTJAcXEuY29tIiwianRpIjoidGVzdCIsImlhdCI6MTU2MDM5MjIyNywiZXhwIjoxNTYwMzkyMjg3LCJuYmYiOjE1NjAzOTIyMzIsInVzZXJfaWQiOjEyLCJ1c2VyX25hbWUiOiJcdTcyZmNcdTcyNTlcdTVjNzEifQ.9xrKKO_CicuBY2l-tHFyaE3eUKNL0K_cqoJDpendhkY';
+
+//实例化转化器
+$parse = new Parser();
+$parse = $parse->parse($token);
+
+//验证token合法性
+
+if(!$parse->verify($signer,$secret)){
+    echo 'token不合法';
+}
+
+//验证token是否已经过期
+if($parse->isExpired()){
+    echo 'token已经过期';
+}
+
+//获取数据
+$user_id = $parse->getClaim('user_id');
+
+$user_name = $parse->getClaim('user_name');
+
+var_dump($user_id);
+var_dump($user_name);
+
+$data = $parse->getClaims();
+
+foreach($data as $row){
+    var_dump($row->getValue());
+    var_dump($row->getName());
+    echo '<br />';
+}
